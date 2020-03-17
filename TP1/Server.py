@@ -32,34 +32,36 @@ class ServerWorker(object):
         if(msg==b' '):
             loop.stop()
             return None
-
-        sig,(ct,mac)=splitter(msg)
-
-        vSig = verify(
-                self.dsaClientPK,
-                self.dhC_PK+self.dhS_PK,
-                sig
-            )
-        print()
-        if(vSig):
-            print("> Signature Verification Successful")
+        if(self.msg_cnt==1):
+            [sig,ct,mac]=splitter(msg)
         else:
-            print("> Failed Signature Verification")
-            loop.stop()
-            return None
+            [ct,mac]=splitter(msg)
 
-        if(HMAC(ct,self.shared_secret,mac)):
-            print("> HMAC Verification Successful")
-        else:
-            print("> Failed HMAC Verification")
-            loop.stop()
-            return None
+        if(self.msg_cnt==1):
+            vSig = verify(
+                    self.dsaClientPK,
+                    self.dhC_PK+self.dhS_PK,
+                    sig
+                )
+            print()
+            if(vSig):
+                print("> Signature Verification Successful")
+            else:
+                print("> Failed Signature Verification")
+                loop.stop()
+                return None
 
+            if(HMAC(ct,self.shared_secret,mac)):
+                print("> HMAC Verification Successful")
+            else:
+                print("> Failed HMAC Verification")
+                loop.stop()
+                return None
+        self.msg_cnt+=1
         old_msg = decrypt(ct,self.shared_secret)
         print("\nReceived:\n",ct,"\n",old_msg)
 
-        loop.stop()
-        return None
+        return b'ok'
         
 
 @asyncio.coroutine

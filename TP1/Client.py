@@ -21,6 +21,8 @@ class Client:
         self.msg_cnt = 0
         self.dsaSK = getPrivateKey("keys/ClientSecret.pem")
         self.dsaServerPK = getPublicKey("keys/ServerPublic.pem")
+        self.shared_secret = None
+        self.dhS_PK = None
 
 
     def process(self, msg=b""):
@@ -29,10 +31,10 @@ class Client:
             self.msg_cnt+=1
             return pKey2bytes(DHgenPKey(self.key))
         if(self.msg_cnt==1):
-            sig,k=splitter(msg)
+            sig,self.dhS_PK=splitter(msg)
             v = verify(
                 self.dsaServerPK,
-                pKey2bytes(DHgenPKey(self.key))+k,
+                pKey2bytes(DHgenPKey(self.key))+self.dhS_PK,
                 sig
             )
 
@@ -41,16 +43,19 @@ class Client:
             else:
                 print("> Failed Signature Verification")
                 return b' '
-            shared_secret=DHgenSharedSecret(self.key,bytes2pKey(k))
-            print('\nShared Secret: '+str(shared_secret))
+            self.shared_secret=DHgenSharedSecret(self.key,bytes2pKey(self.dhS_PK))
+            print('\nShared Secret: '+str(self.shared_secret))
         
         self.msg_cnt +=1
-        print('\nInput message to send:')
+        print('\nInput message to send (empty to finish):')
         new_msg = str(input())
-        ct  = encrypt(new_msg,shared_secret)
-        mac = HMAC(ct,shared_secret)
-        sig = sign(self.dsaSK,pKey2bytes(DHgenPKey(self.key))+k)
-        msg = sig+FS+ct+FS+mac
+        ct  = encrypt(new_msg,self.shared_secret)
+        mac = HMAC(ct,self.shared_secret)
+        sig = sign(self.dsaSK,pKey2bytes(DHgenPKey(self.key))+self.dhS_PK)
+        if(self.msg_cnt==2):
+            msg = sig+FS+ct+FS+mac
+        else:
+            msg = ct+FS+mac
         return msg if len(new_msg)>0 else b' '
 
 

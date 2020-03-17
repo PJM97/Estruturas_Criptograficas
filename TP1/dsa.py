@@ -108,9 +108,9 @@ FS = b'||-----||'
 
 def splitter(bt,fs=b'||-----||'):
     l=b''
-    if(not fs in bt): return bt
+    if(not fs in bt): return [bt]
     while(len(bt)>0 and not fs in bt[0:len(fs)]):
         l+=bt[0:1]
         bt=bt[1:]
-    return l,splitter(bt[len(fs):])
+    return [l]+splitter(bt[len(fs):])
 
